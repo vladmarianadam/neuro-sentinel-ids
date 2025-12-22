@@ -1,0 +1,44 @@
+# Network Configuration
+vars:
+  address-groups:
+    HOME_NET: "[192.168.1.0/24]"  # Adjust to your subnet
+    EXTERNAL_NET: "!$HOME_NET"
+
+# Output Configuration (The Interface to Role B)
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes             # Useful for Deep Packet Inspection (DPI)
+            payload-buffer-size: 4kb
+            payload-printable: yes
+            packet: yes
+            http-body: yes
+        - flow:
+            enabled: yes             # CRITICAL: This generates the data for the ML model
+            include-flow-uuid: yes
+        - http:
+            enabled: yes
+            extended: yes
+        - dns:
+            enabled: yes
+        - tls:
+            enabled: yes
+            extended: yes
+
+# Flow Settings (Tuning for Real-time Response)
+flow:
+  memcap: 128mb
+  hash-size: 65536
+  prealloc: 10000
+  emergency-recovery: 30
+
+# Flow Timeouts (Reducing latency for ML ingestion)
+# Standard timeouts (e.g., 600s) delay ML detection. We reduce them for the project.
+flow-timeouts:
+  default:
+    new: 30
+    established: 120  # Reduced from 3600 to allow faster log generation for analysis

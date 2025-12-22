@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Service 1: Infrastructure Layer (Suricata)
+  suricata:
+    build: ./infrastructure
+    container_name: suricata_ids
+    # Host mode is essential for seeing real traffic on the physical interface
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN   # For stopping traffic (IPS)
+      - NET_RAW     # For packet capture
+      - SYS_NICE    # For performance tuning
+    volumes:
+      - ./logs:/var/log/suricata
+      - ./infrastructure/suricata.yaml:/etc/suricata/suricata.yaml
+      - ./infrastructure/rules:/var/lib/suricata/rules
+    command: -i ${HOST_INTERFACE} -k none
+    restart: unless-stopped
+
+  # Service 2: Machine Learning Layer (The Brain)
+  ml_engine:
+    build: ./ml_engine
+    container_name: ml_ips_brain
+    # Needs host networking to manipulate the HOST's iptables
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./logs:/var/log/suricata:ro  # Read-only access to logs
+      - ./ml_engine/models:/app/models
+    environment:
+      - LOG_FILE_PATH=/var/log/suricata/eve.json
+      - BLOCK_THRESHOLD=0.85
+    depends_on:
+      - suricata
+    restart: always
+
+  # Service 3: Visualization (Dashboard)
+  dashboard:
+    build: ./dashboard
+    container_name: security_dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      -./logs:/var/log/suricata:ro
+    environment:
+      - LOG_FILE=/var/log/suricata/eve.json
+    restart: always
+
+  # Service 4: Attack Simulation (Internal Testing)
+  # Uses bridge mode to simulate "external" traffic if not testing on a live interface
+  attacker:
+    image: kalilinux/kali-rolling
+    container_name: red_team_sim
+    command: /bin/bash -c "apt-get update && apt-get install -y hping3 hydra nmap && tail -f /dev/null"
+    networks:
+      - attack_net
+
+networks:
+  attack_net:
+    driver: bridge
