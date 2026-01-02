@@ -1,7 +1,9 @@
+%YAML 1.1
+---
 # Network Configuration
 vars:
   address-groups:
-    HOME_NET: "[192.168.1.0/24]"  # Adjust to your subnet
+    HOME_NET: "[172.16.0.0/12,192.168.0.0/16,10.0.0.0/8]"  # Adjust to your subnet
     EXTERNAL_NET: "!$HOME_NET"
 
 # Output Configuration (The Interface to Role B)
@@ -42,3 +44,15 @@ flow-timeouts:
   default:
     new: 30
     established: 120  # Reduced from 3600 to allow faster log generation for analysis
+
+    # Rule Configuration
+default-rule-path: /var/lib/suricata/rules
+rule-files:
+  - suricata.rules
+
+# Capture Settings (Telling Suricata how to listen)
+af-packet:
+  - interface: eth0
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes

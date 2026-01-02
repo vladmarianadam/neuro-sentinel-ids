@@ -11,8 +11,8 @@ LOG_FILE = '/var/log/suricata/eve.json'
 
 @st.cache_data(ttl=5)
 def load_data():
-    alerts =
-    flows =
+    alerts = []
+    flows = []
     try:
         with open(LOG_FILE, 'r') as f:
             # tailored for performance, read last 2000 lines
