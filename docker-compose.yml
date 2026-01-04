@@ -13,7 +13,7 @@ services:
       - ./logs:/var/log/suricata
       - ./infrastructure/suricata.yaml:/etc/suricata/suricata.yaml
       - ./infrastructure/rules:/var/lib/suricata/rules
-    command: suricata -i eth0 -k none
+    command: suricata -i br-proiect -k none
     restart: unless-stopped
     
 
@@ -54,10 +54,37 @@ services:
   attacker:
     image: kalilinux/kali-rolling
     container_name: red_team_sim
-    command: /bin/bash -c "apt-get update && apt-get install -y hping3 hydra nmap && tail -f /dev/null"
+    command: /bin/bash -c "apt-get update && apt-get install -y hping3 hydra nmap && apt install iputils-ping -y && tail -f /dev/null"
     networks:
       - attack_net
+
+  # Service 5: Victim 1 - Web Server (Target for DoS/Scans)
+  victim_web:
+    image: httpd:latest
+    container_name: victim_apache
+    networks:
+      - attack_net
+    restart: always
+
+  # Service 6: Victim 2 - SSH Server (Target for Brute Force)
+  victim_ssh:
+    image: rastasheep/ubuntu-sshd
+    container_name: victim_ssh_server
+    networks:
+      - attack_net
+    restart: always
+
+  victim_nginx:
+      image: nginx:latest
+      container_name: victim_nginx_server
+      networks:
+        - attack_net
+      ports:
+        - "8080:80"
+      restart: always
 
 networks:
   attack_net:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: "br-proiect"

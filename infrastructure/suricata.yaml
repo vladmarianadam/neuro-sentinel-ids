@@ -3,8 +3,8 @@
 # Network Configuration
 vars:
   address-groups:
-    HOME_NET: "[172.16.0.0/12,192.168.0.0/16,10.0.0.0/8]"  # Adjust to your subnet
-    EXTERNAL_NET: "!$HOME_NET"
+    HOME_NET: "[172.18.0.0/16]"  # Rețeaua ta Docker
+    EXTERNAL_NET: "any"
 
 # Output Configuration (The Interface to Role B)
 outputs:
@@ -22,6 +22,8 @@ outputs:
         - flow:
             enabled: yes             # CRITICAL: This generates the data for the ML model
             include-flow-uuid: yes
+        - icmp:           
+            enabled: yes
         - http:
             enabled: yes
             extended: yes
@@ -42,9 +44,13 @@ flow:
 # Standard timeouts (e.g., 600s) delay ML detection. We reduce them for the project.
 flow-timeouts:
   default:
-    new: 30
-    established: 120  # Reduced from 3600 to allow faster log generation for analysis
-
+    new: 5            # Scade de la 30
+    established: 10   # Scade de la 120
+    closed: 0
+  icmp:               # Adaugă secțiune specifică pentru Ping
+    new: 2
+    established: 5
+    
     # Rule Configuration
 default-rule-path: /var/lib/suricata/rules
 rule-files:
@@ -52,7 +58,12 @@ rule-files:
 
 # Capture Settings (Telling Suricata how to listen)
 af-packet:
-  - interface: eth0
+  - interface: br-proiect
     cluster-id: 99
     cluster-type: cluster_flow
     defrag: yes
+
+stream:
+  memcap: 64mb
+  checksum-validation: no      # CRITIC: Docker generează adesea checksums "greșite"
+  inline: auto
