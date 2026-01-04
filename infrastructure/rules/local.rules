@@ -1,1 +1,8 @@
-alert ip any any -> any any (msg:"ALERTA IPV4 DETECTATA"; sid:999999; rev:1;)
+# 1. Regula pentru PING simplu (ICMP)
+alert icmp any any -> $HOME_NET any (msg:"ICMP Ping Detectat"; icmp_type:8; sid:1000003; rev:1;)
+
+# 2. Regula pentru SCANARE (TCP port 22)
+alert tcp any any -> $HOME_NET 22 (msg:"Scanare Port SSH"; flags:S; sid:1000004; rev:1;)
+
+# 3. Regula pentru FLOOD (TCP port 80)
+alert tcp any any -> $HOME_NET 80 (msg:"Atac SYN Flood detectat"; flags:S; flow:stateless; threshold:type limit, track by_src, count 1, seconds 10; sid:1000005; rev:1;)
