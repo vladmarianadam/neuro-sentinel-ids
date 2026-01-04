@@ -118,7 +118,7 @@ def main():
                     logging.info(f" Alert: {signature} from {src_ip}")
                     
                     # Immediate blocking for high severity signature matches
-                    if severity <= 1: 
+                    if severity <= 3: 
                         block_ip(src_ip, reason=f"Signature: {signature}")
 
                 # LOGIC B: Anomaly Detection (ML on Flow Completion)
