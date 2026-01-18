@@ -1,0 +1,70 @@
+============================================================
+NEURO-SENTINEL IDS - MODEL TRAINING
+============================================================
+Model type: RF
+Classification: Binary (normal/attack)
+Test size: 0.2
+Loading dataset from: /mnt/c/02_work/Neuro/neuro-sentinel-ids/ml_engine/dataset/KDDTrain+.txt
+Loaded 125,973 records with 43 columns
+
+Preprocessing data...
+Using binary classification (normal vs attack)
+Features selected: ['duration', 'src_bytes', 'dst_bytes', 'count', 'srv_count', 'serror_rate', 'rerror_rate', 'same_srv_rate', 'diff_srv_rate']
+Records after cleaning: 125,973
+
+Class distribution:
+  0: 67,343 (53.5%)
+  1: 58,630 (46.5%)
+
+Splitting data (80% train, 20% test)...
+Training set: 100,778 samples
+Test set: 25,195 samples
+
+Scaling features...
+
+Training RF model...
+Training complete!
+
+============================================================
+MODEL EVALUATION
+============================================================
+
+Accuracy: 0.9856 (98.56%)
+
+Classification Report:
+              precision    recall  f1-score   support
+
+      Normal       0.98      1.00      0.99     13469
+      Attack       1.00      0.97      0.98     11726
+
+    accuracy                           0.99     25195
+   macro avg       0.99      0.98      0.99     25195
+weighted avg       0.99      0.99      0.99     25195
+
+
+Confusion Matrix:
+[[13433    36]
+ [  327 11399]]
+
+============================================================
+FEATURE IMPORTANCE
+============================================================
+  1. src_bytes: 0.4545
+  2. dst_bytes: 0.2410
+  3. same_srv_rate: 0.1020
+  4. count: 0.0608
+  5. diff_srv_rate: 0.0529
+  6. srv_count: 0.0393
+  7. serror_rate: 0.0261
+  8. rerror_rate: 0.0123
+  9. duration: 0.0111
+
+Model saved to: /mnt/c/02_work/Neuro/neuro-sentinel-ids/ml_engine/models/rf_model.joblib
+Scaler saved to: /mnt/c/02_work/Neuro/neuro-sentinel-ids/ml_engine/models/scaler.joblib
+Metadata saved to: /mnt/c/02_work/Neuro/neuro-sentinel-ids/ml_engine/models/model_metadata.json
+
+============================================================
+TRAINING COMPLETE!
+============================================================
+Final accuracy: 98.56%
+Model saved to: /mnt/c/02_work/Neuro/neuro-sentinel-ids/ml_engine/models

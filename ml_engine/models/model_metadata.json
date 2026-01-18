@@ -1,0 +1,21 @@
+{
+  "model_type": "rf",
+  "feature_names": [
+    "duration",
+    "src_bytes",
+    "dst_bytes",
+    "count",
+    "srv_count",
+    "serror_rate",
+    "rerror_rate",
+    "same_srv_rate",
+    "diff_srv_rate"
+  ],
+  "training_date": "2026-01-18T13:12:46.636280",
+  "dataset": "KDD NSL (KDDTrain+.txt)",
+  "multiclass": false,
+  "classes": [
+    "normal",
+    "attack"
+  ]
+}
