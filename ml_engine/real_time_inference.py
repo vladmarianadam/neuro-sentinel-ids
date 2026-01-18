@@ -1,10 +1,13 @@
 import time
 import json
+import pandas as pd
 import joblib
 import subprocess
 import numpy as np
 import os
 import logging
+from collections import Counter
+import datetime
 
 # Configuration
 LOG_FILE = os.getenv('LOG_FILE_PATH', '/var/log/suricata/eve.json')
@@ -23,6 +26,23 @@ try:
 except FileNotFoundError:
     logging.error("Model files not found. Run training first.")
     exit(1)
+
+
+# Global tracking
+dest_hits = Counter()
+dest_history = {}
+
+def get_dynamic_count(ip):
+    now = datetime.datetime.now()
+    if ip not in dest_history:
+        dest_history[ip] = []
+    
+    dest_history[ip].append(now)
+    # Clean up old timestamps (2s window)
+    dest_history[ip] = [ts for ts in dest_history[ip] if (now - ts).total_seconds() < 2]
+    
+    return len(dest_history[ip])
+
 
 def block_ip(ip_address, reason="Anomaly"):
     """
@@ -53,56 +73,39 @@ def block_ip(ip_address, reason="Anomaly"):
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to block IP {ip_address}: {e}")
 
-def process_flow_event(event):
-    """
-    Extracts features from Suricata Flow event and maps to KDD NSL Schema.
+FEATURE_COLS = [
+    'duration', 'src_bytes', 'dst_bytes', 'count', 'srv_count', 
+    'serror_rate', 'rerror_rate', 'same_srv_rate', 'diff_srv_rate'
+]
 
-    KDD Features extracted from Suricata:
-        - duration: flow.age (seconds)
-        - src_bytes: flow.bytes_toserver
-        - dst_bytes: flow.bytes_toclient
-        - count, srv_count: approximated as 1 (single flow)
-        - serror_rate, rerror_rate: 0 for completed flows
-        - same_srv_rate, diff_srv_rate: approximated
-    """
+def process_flow_event(event):
     try:
         flow = event.get('flow', {})
+        # Dynamic: Get the actual destination of this specific packet
+        # In a flood, this will be your server's IP
+        current_dst = event.get('dest_ip') or event.get('src_ip')
+        
+        if not current_dst:
+            return None
 
-        # FEATURE 1: Duration (seconds) - matches KDD 'duration'
-        duration = flow.get('age', 0)
+        # Get the count for THIS specific destination
+        flood_count = get_dynamic_count(current_dst)
 
-        # FEATURE 2: Source bytes - matches KDD 'src_bytes'
-        src_bytes = flow.get('bytes_toserver', 0)
+        data = {
+            'duration': flow.get('age', 0),
+            'src_bytes': flow.get('bytes_toserver', 0),
+            'dst_bytes': flow.get('bytes_toclient', 0),
+            'count': flood_count,
+            'srv_count': flood_count, 
+            'serror_rate': 1.0 if flow.get('bytes_toclient', 0) == 0 else 0.0,
+            'rerror_rate': 0.0,
+            'same_srv_rate': 1.0,
+            'diff_srv_rate': 0.0
+        }
 
-        # FEATURE 3: Destination bytes - matches KDD 'dst_bytes'
-        dst_bytes = flow.get('bytes_toclient', 0)
-
-        # FEATURE 4-5: Connection counts (approximated for single flow)
-        # In a full implementation, these would be tracked across flows
-        count = 1
-        srv_count = 1
-
-        # FEATURE 6-7: Error rates (0 for completed flows)
-        # These would require tracking connection attempts
-        serror_rate = 0.0
-        rerror_rate = 0.0
-
-        # FEATURE 8-9: Service rates (approximated)
-        same_srv_rate = 1.0
-        diff_srv_rate = 0.0
-
-        # Construct Feature Vector (must match training order)
-        # Order: duration, src_bytes, dst_bytes, count, srv_count,
-        #        serror_rate, rerror_rate, same_srv_rate, diff_srv_rate
-        features = np.array([[
-            duration, src_bytes, dst_bytes, count, srv_count,
-            serror_rate, rerror_rate, same_srv_rate, diff_srv_rate
-        ]])
-
-        return features
-
+        return pd.DataFrame([data], columns=FEATURE_COLS)
     except Exception as e:
-        logging.error(f"Feature extraction error: {e}")
+        logging.error(f"Error: {e}")
         return None
 
 def main():
@@ -143,22 +146,35 @@ def main():
 
                 # LOGIC B: Anomaly Detection (ML on Flow Completion)
                 elif event_type == 'flow':
+                    # print(event)
                     # Only process flows that have actual data transfer
                     if event['flow'].get('bytes_toserver', 0) < 10:
                         continue
 
-                    features = process_flow_event(event)
-                    if features is not None:
-                        # Scale features
-                        features_scaled = scaler.transform(features)
+                    features_df = process_flow_event(event)
+                    if features_df is not None:
+                        features_scaled = scaler.transform(features_df)
                         # Predict
+                        # print(f"DEBUG FEATURES: {features_df.values}")
                         prediction = model.predict(features_scaled)
+                        # print("prediction:", prediction)
                         confidence = np.max(model.predict_proba(features_scaled))
+                        # print("confidence:", confidence)
                         
                         # 1 = Attack
-                        if prediction[0] == 1 and confidence > 0.85:
-                            logging.warning(f"[ML] Anomaly Detected! Confidence: {confidence:.2f}")
-                            block_ip(src_ip, reason="ML Anomaly Detection")
+                        if prediction[0] == 1:
+                            # Dacă zice clar că e atac, blocăm
+                            logging.warning(f"[ML] Atac Detectat! Confidence: {confidence:.2f}")
+                            block_ip(src_ip, reason="ML Attack Prediction")
+
+                        elif prediction[0] == 0 and confidence < 0.85:
+                            # Dacă zice că e Normal, dar e nesigur (sub 85%), e suspect
+                            logging.warning(f"[ML] Trafic Suspect! (Normal dar nesigur: {confidence:.2f})")
+                            
+                            # Verificăm dacă e tiparul de SYN Flood (multe pachete fără răspuns)
+                            if features_df['serror_rate'].iloc[0] == 1.0:
+                                logging.warning(f"-> Tipar SYN Flood detectat (Serror=1). Blocăm!")
+                                block_ip(src_ip, reason="Low Confidence + Serror Rate")
 
             except json.JSONDecodeError:
                 continue
