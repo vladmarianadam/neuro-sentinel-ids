@@ -389,6 +389,10 @@ ml_engine:
    docker inspect ml_ips_brain | grep NetworkMode
    ```
 
+4. Check for "No chain/target/match" error:
+   If logs show this error, the container is using a different iptables backend than the host (Legacy vs NFT).
+   **Solution:** The container likely needs to use `iptables-nft`. Update the Dockerfile or install `iptables-nft` inside the container.
+
 ### Dashboard Not Loading
 
 1. Check container status:
@@ -401,6 +405,18 @@ ml_engine:
    docker port security_dashboard
    netstat -tlnp | grep 8501
    ```
+
+## Check the rules to see what was blocked
+```bash
+sudo iptables -L DOCKER-USER -n -v
+sudo iptables -L INPUT -n -v
+```
+ 
+## Flush the rules (Warning: this clears ALL rules in these chains)
+```bash
+sudo iptables -F DOCKER-USER
+sudo iptables -F INPUT
+```
 
 ## Stopping the System
 

@@ -4,5 +4,200 @@ alert icmp any any -> $HOME_NET any (msg:"ICMP Ping Detectat"; icmp_type:8; sid:
 # 2. Regula pentru SCANARE (TCP port 22)
 alert tcp any any -> $HOME_NET 22 (msg:"Scanare Port SSH"; flags:S; sid:1000004; rev:1;)
 
-# 3. Regula pentru FLOOD (TCP port 80)
+# 3. Regula pentru BRUTE FORCE (TCP port 22)
+alert tcp $EXTERNAL_NET any -> $HOME_NET 22 (msg:"Atac Brute Force SSH Detectat"; flags:S,12; threshold:type both, track by_src, count 10, seconds 60; sid:1000006; rev:1;)
+
+# 4. Regula pentru FLOOD (TCP port 80)
 alert tcp any any -> $HOME_NET 80 (msg:"Atac SYN Flood detectat"; flags:S; flow:stateless; threshold:type limit, track by_src, count 1, seconds 10; sid:1000005; rev:1;)
+
+
+alert http $HOME_NET any -> any any (msg:"ET POLICY IP Check Domain (api.ipify.org)"; http.host; content:"api.ipify.org"; sid:2000001; rev:1;)
+
+alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"ET SCAN Nmap Scripting Engine User-Agent Detectat"; http.user_agent; content:"Nmap Scripting Engine"; sid:2000002; rev:1;)
+
+
+alert http any any -> any any (msg: "Possible SQL Injection attack (Contains singlequote)"; flow:established,to_server; content:"'"; nocase; http_uri; sid:50300001;)
+alert http any any -> any any (msg: "Possible SQL Injection attack (Contains UNION)"; flow:established,to_server; content:"union"; nocase; http_uri; sid:50300002;)
+alert http any any -> any any (msg: "Possible SQL Injection attack (Contains SELECT)"; flow:established,to_server; content:"select"; nocase; http_uri; sid:50300003;)
+alert http any any -> any any (msg: "Possible SQL Injection attack (Contains singlequote POST DATA)"; flow:established,to_server; content:"'"; nocase; http_client_body; sid:50300004;)
+alert http any any -> any any (msg: "Possible SQL Injection attack (Contains UNION POST DATA)"; flow:established,to_server; content:"union"; nocase; http_client_body; sid:50300005;)
+alert http any any -> any any (msg: "Possible SQL Injection attack (Contains SELECT POST DATA)"; flow:established,to_server; content:"select"; nocase; http_client_body; sid:50300006;)
+
+alert http any any -> any any (msg:"Attempt to access /bin*"; content:"bin"; nocase; pcre:"/(\/|%2F)bin/i"; classtype:attempted-recon; sid:50200001; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /sbin*"; content:"sbin"; nocase; pcre:"/(\/|%2F)sbin/i"; classtype:attempted-recon; sid:50200002; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /etc*"; content:"etc"; nocase; pcre:"/(\/|%2F)etc/i"; classtype:attempted-recon; sid:50200003; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /dev*"; content:"dev"; nocase; pcre:"/(\/|%2F)dev/i"; classtype:attempted-recon; sid:50200004; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /proc*"; content:"proc"; nocase; pcre:"/(\/|%2F)proc/i"; classtype:attempted-recon; sid:50200005; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /var*"; content:"var"; nocase; pcre:"/(\/|%2F)var/i"; classtype:attempted-recon; sid:50200006; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /tmp*"; content:"tmp"; nocase; pcre:"/(\/|%2F)tmp/i"; classtype:attempted-recon; sid:50200007; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /usr*"; content:"usr"; nocase; pcre:"/(\/|%2F)usr/i"; classtype:attempted-recon; sid:50200008; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /home*"; content:"home"; nocase; pcre:"/(\/|%2F)home/i"; classtype:attempted-recon; sid:50200009; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /boot*"; content:"boot"; nocase; pcre:"/(\/|%2F)boot/i"; classtype:attempted-recon; sid:50200010; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /lib*"; content:"lib"; nocase; pcre:"/(\/|%2F)lib/i"; classtype:attempted-recon; sid:50200011; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /opt*"; content:"opt"; nocase; pcre:"/(\/|%2F)opt/i"; classtype:attempted-recon; sid:50200012; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /mnt*"; content:"mnt"; nocase; pcre:"/(\/|%2F)mnt/i"; classtype:attempted-recon; sid:50200013; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /media*"; content:"media"; nocase; pcre:"/(\/|%2F)media/i"; classtype:attempted-recon; sid:50200014; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /srv*"; content:"srv"; nocase; pcre:"/(\/|%2F)srv/i"; classtype:attempted-recon; sid:50200015; rev:1;)
+alert http any any -> any any (msg:"Attempt to access /root*"; content:"root"; nocase; pcre:"/^(\/|%2F)root/i"; classtype:attempted-recon; sid:50200016; rev:1;)
+
+
+alert http any any -> any any (msg:"Possible XSS attack, script tag"; content:"script"; nocase; pcre:"/(<|%3C|%253C)script/smi"; classtype:web-application-attack; sid:50100001; rev:1;)
+alert http any any -> any any (msg:"Possible XSS attack, js event handler"; content:"on"; nocase; pcre:"/on\w+(%3D|=)/smi"; classtype:web-application-attack; sid:50100002; rev:1;)
+alert http any any -> any any (msg:"Possible XSS attack, js protocol"; content:"javascript"; nocase; pcre:"/javascript(:|%3A)/smi"; classtype:web-application-attack; sid:50100003; rev:1;)
+
+alert http any any -> any any (msg:"Oracle Siebel Loyalty 8.1 - Cross-Site Scripting"; content:"/loyalty_enu/start.swe"; http_uri; content:"%3Cscript"; nocase; http_uri; classtype:web-application-attack; sid:60000001; rev:1;)
+
+alert http any any -> any any (msg:"Detect SQLMap"; content:"sqlmap/"; nocase; http_user_agent; classtype:web-application-activity; sid:50000001; rev:1;)
+
+alert http any any -> any any (msg:"Detect robots.txt"; content:"/robots.txt"; http_uri; classtype:attempted-recon; sid:40000001; rev:1;)
+alert http any any -> any any (msg:"Detect sitemap - sitemap.xml"; content:"/sitemap.xml"; http_uri; classtype:attempted-recon; sid:40000002; rev:1;)
+alert http any any -> any any (msg:"Detect sitemap - sitemap.xsl"; content:"/sitemap.xsl"; http_uri; classtype:attempted-recon; sid:40000003; rev:1;)
+alert http any any -> any any (msg:"Detect sitemap - sitemap.xsd"; content:"/sitemap.xsd"; http_uri; classtype:attempted-recon; sid:40000004; rev:1;)
+
+alert http any any -> any any (msg:"ExacqVision Default Login"; content:"POST"; http_method; content:"/service.web"; http_uri; content:"action=login"; http_client_body; content:"u=admin"; http_client_body; content:"p=admin256"; http_client_body; classtype:default-login-attempt; sid:30000001; rev:1;)
+
+# ============================================================================
+# KDD DATASET ALIGNED RULES - Matching ML Model Training Data
+# Categories: DoS, Probe, R2L (Remote to Local), U2R (User to Root)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# DoS ATTACKS (Denial of Service) - Priority 1 (Critical)
+# KDD types: neptune, smurf, back, teardrop, pod, land, apache2, udpstorm
+# ----------------------------------------------------------------------------
+
+# Neptune Attack (SYN Flood) - High volume SYN packets
+alert tcp any any -> $HOME_NET any (msg:"KDD DoS - Neptune SYN Flood Attack"; flags:S; threshold:type both, track by_src, count 50, seconds 5; classtype:denial-of-service; priority:1; sid:7000001; rev:1;)
+
+# Smurf Attack - ICMP broadcast amplification
+alert icmp any any -> $HOME_NET any (msg:"KDD DoS - Smurf ICMP Flood"; icmp_type:0; threshold:type both, track by_src, count 100, seconds 10; classtype:denial-of-service; priority:1; sid:7000002; rev:1;)
+
+# Land Attack - Source IP equals destination IP
+alert ip any any -> $HOME_NET any (msg:"KDD DoS - Land Attack (src=dst)"; sameip; classtype:denial-of-service; priority:1; sid:7000003; rev:1;)
+
+# Teardrop Attack - Overlapping IP fragments
+alert ip any any -> $HOME_NET any (msg:"KDD DoS - Teardrop Fragmentation Attack"; fragbits:M; classtype:denial-of-service; priority:1; sid:7000004; rev:1;)
+
+# Pod (Ping of Death) - Oversized ICMP packets
+alert icmp any any -> $HOME_NET any (msg:"KDD DoS - Ping of Death (Oversized ICMP)"; dsize:>1000; classtype:denial-of-service; priority:1; sid:7000005; rev:1;)
+
+# UDP Storm - High volume UDP traffic
+alert udp any any -> $HOME_NET any (msg:"KDD DoS - UDP Storm Attack"; threshold:type both, track by_src, count 100, seconds 5; classtype:denial-of-service; priority:1; sid:7000006; rev:1;)
+
+# Apache2 DoS - HTTP flood targeting web servers
+alert http any any -> $HOME_NET 80 (msg:"KDD DoS - HTTP Flood Attack"; threshold:type both, track by_src, count 100, seconds 10; classtype:denial-of-service; priority:1; sid:7000007; rev:1;)
+
+# Back Attack - Apache DoS via malformed requests
+alert http any any -> $HOME_NET 80 (msg:"KDD DoS - Back Attack (Malformed HTTP)"; content:"GET"; http_method; content:"//"; http_uri; classtype:denial-of-service; priority:2; sid:7000008; rev:1;)
+
+# ----------------------------------------------------------------------------
+# PROBE ATTACKS (Scanning/Reconnaissance) - Priority 2
+# KDD types: satan, ipsweep, portsweep, nmap, mscan, saint
+# ----------------------------------------------------------------------------
+
+# Nmap SYN Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"KDD Probe - Nmap SYN Scan"; flags:S; threshold:type both, track by_src, count 20, seconds 5; classtype:attempted-recon; priority:2; sid:7001001; rev:1;)
+
+# Nmap FIN Scan (Stealth)
+alert tcp any any -> $HOME_NET any (msg:"KDD Probe - Nmap FIN Scan"; flags:F; classtype:attempted-recon; priority:2; sid:7001002; rev:1;)
+
+# Nmap XMAS Scan
+alert tcp any any -> $HOME_NET any (msg:"KDD Probe - Nmap XMAS Scan"; flags:FPU; classtype:attempted-recon; priority:2; sid:7001003; rev:1;)
+
+# Nmap NULL Scan
+alert tcp any any -> $HOME_NET any (msg:"KDD Probe - Nmap NULL Scan"; flags:0; classtype:attempted-recon; priority:2; sid:7001004; rev:1;)
+
+# IP Sweep - ICMP ping sweep
+alert icmp any any -> $HOME_NET any (msg:"KDD Probe - IP Sweep (ICMP)"; icmp_type:8; threshold:type both, track by_src, count 10, seconds 30; classtype:attempted-recon; priority:2; sid:7001005; rev:1;)
+
+# Port Sweep - Single host, multiple ports
+alert tcp any any -> $HOME_NET any (msg:"KDD Probe - Port Sweep Detected"; flags:S; threshold:type both, track by_src, count 30, seconds 10; classtype:attempted-recon; priority:2; sid:7001006; rev:1;)
+
+# Satan/Saint Scanner - Multiple services probing
+alert tcp any any -> $HOME_NET [21,22,23,25,53,80,110,111,139,143,443,445] (msg:"KDD Probe - Multi-Service Scan (Satan/Saint)"; flags:S; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-recon; priority:2; sid:7001007; rev:1;)
+
+# Mscan - Mass scanning detection
+alert tcp any any -> $HOME_NET any (msg:"KDD Probe - Mass Scanner Detection"; flags:S,12; threshold:type both, track by_src, count 100, seconds 30; classtype:attempted-recon; priority:2; sid:7001008; rev:1;)
+
+# ----------------------------------------------------------------------------
+# R2L ATTACKS (Remote to Local - Unauthorized Access) - Priority 1-2
+# KDD types: guess_passwd, warezclient, warezmaster, ftp_write, imap, phf, multihop
+# ----------------------------------------------------------------------------
+
+# FTP Brute Force (guess_passwd)
+alert tcp any any -> $HOME_NET 21 (msg:"KDD R2L - FTP Brute Force Attack"; flow:to_server,established; content:"USER"; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; priority:1; sid:7002001; rev:1;)
+
+# FTP Failed Login Detection
+alert ftp any any -> $HOME_NET any (msg:"KDD R2L - FTP Login Failed"; content:"530"; classtype:unsuccessful-user; priority:2; sid:7002002; rev:1;)
+
+# Telnet Brute Force (guess_passwd)
+alert tcp any any -> $HOME_NET 23 (msg:"KDD R2L - Telnet Brute Force Attack"; flow:to_server,established; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; priority:1; sid:7002003; rev:1;)
+
+# IMAP Attack
+alert tcp any any -> $HOME_NET 143 (msg:"KDD R2L - IMAP Buffer Overflow Attempt"; flow:to_server,established; content:"|90 90 90 90|"; classtype:attempted-admin; priority:1; sid:7002004; rev:1;)
+
+# PHF CGI Attack
+alert http any any -> $HOME_NET any (msg:"KDD R2L - PHF CGI Attack"; content:"/cgi-bin/phf"; http_uri; classtype:web-application-attack; priority:1; sid:7002005; rev:1;)
+
+# Warezmaster/Warezclient - Unauthorized file sharing
+alert ftp any any -> $HOME_NET 21 (msg:"KDD R2L - Warez FTP Activity"; flow:to_server,established; content:"STOR"; classtype:policy-violation; priority:2; sid:7002006; rev:1;)
+
+# Spy - Sensitive file access attempts
+alert http any any -> $HOME_NET any (msg:"KDD R2L - Sensitive File Access (passwd)"; content:"/etc/passwd"; http_uri; classtype:attempted-recon; priority:1; sid:7002007; rev:1;)
+
+alert http any any -> $HOME_NET any (msg:"KDD R2L - Sensitive File Access (shadow)"; content:"/etc/shadow"; http_uri; classtype:attempted-admin; priority:1; sid:7002008; rev:1;)
+
+# Sendmail Attack
+alert tcp any any -> $HOME_NET 25 (msg:"KDD R2L - Sendmail Exploit Attempt"; flow:to_server,established; content:"|7C|"; classtype:attempted-admin; priority:1; sid:7002009; rev:1;)
+
+# SNMP Attack (snmpgetattack/snmpguess)
+alert udp any any -> $HOME_NET 161 (msg:"KDD R2L - SNMP Community String Guessing"; content:"public"; classtype:attempted-recon; priority:2; sid:7002010; rev:1;)
+
+alert udp any any -> $HOME_NET 161 (msg:"KDD R2L - SNMP Private Community Access"; content:"private"; classtype:attempted-admin; priority:1; sid:7002011; rev:1;)
+
+# Multihop - Multiple protocol usage for evasion
+alert tcp any any -> $HOME_NET [21,22,23,25,80] (msg:"KDD R2L - Multihop Protocol Hopping"; flow:established; threshold:type both, track by_src, count 3, seconds 30; classtype:trojan-activity; priority:2; sid:7002012; rev:1;)
+
+# ----------------------------------------------------------------------------
+# U2R ATTACKS (User to Root - Privilege Escalation) - Priority 1
+# KDD types: buffer_overflow, rootkit, loadmodule, perl, sqlattack
+# ----------------------------------------------------------------------------
+
+# Buffer Overflow - NOP sled detection
+alert tcp any any -> $HOME_NET any (msg:"KDD U2R - Buffer Overflow NOP Sled"; content:"|90 90 90 90 90 90 90 90|"; classtype:shellcode-detect; priority:1; sid:7003001; rev:1;)
+
+# Buffer Overflow - Shellcode detection
+alert tcp any any -> $HOME_NET any (msg:"KDD U2R - Possible Shellcode (x86)"; content:"|eb|"; content:"|ff e4|"; within:50; classtype:shellcode-detect; priority:1; sid:7003002; rev:1;)
+
+# Rootkit - Suspicious kernel module loading
+alert http any any -> $HOME_NET any (msg:"KDD U2R - Rootkit Module Load Attempt"; content:"insmod"; http_uri; classtype:attempted-admin; priority:1; sid:7003003; rev:1;)
+
+# Loadmodule Attack - Kernel manipulation
+alert http any any -> $HOME_NET any (msg:"KDD U2R - Loadmodule Exploit Attempt"; content:"modprobe"; http_uri; classtype:attempted-admin; priority:1; sid:7003004; rev:1;)
+
+# Perl Attack - Malicious Perl execution
+alert http any any -> $HOME_NET any (msg:"KDD U2R - Perl Command Injection"; content:"perl"; http_uri; content:"-e"; http_uri; classtype:attempted-admin; priority:1; sid:7003005; rev:1;)
+
+# SQL Attack (Command execution via SQL)
+alert http any any -> $HOME_NET any (msg:"KDD U2R - SQL Command Injection (xp_cmdshell)"; content:"xp_cmdshell"; nocase; classtype:web-application-attack; priority:1; sid:7003006; rev:1;)
+
+alert http any any -> $HOME_NET any (msg:"KDD U2R - SQL Command Injection (INTO OUTFILE)"; content:"INTO"; nocase; content:"OUTFILE"; nocase; distance:0; within:20; classtype:web-application-attack; priority:1; sid:7003007; rev:1;)
+
+# Privilege Escalation - sudo/su abuse
+alert tcp any any -> $HOME_NET 22 (msg:"KDD U2R - SSH Privilege Escalation Attempt"; flow:established; content:"sudo"; classtype:attempted-admin; priority:1; sid:7003008; rev:1;)
+
+# ----------------------------------------------------------------------------
+# ADDITIONAL BEHAVIORAL RULES - Based on KDD Features
+# These complement ML detection with signature-based detection
+# ----------------------------------------------------------------------------
+
+# High Error Rate Detection (serror_rate, rerror_rate from KDD)
+alert tcp any any -> $HOME_NET any (msg:"KDD Behavior - High Connection Reset Rate"; flags:R; threshold:type both, track by_src, count 20, seconds 10; classtype:attempted-dos; priority:2; sid:7004001; rev:1;)
+
+# Failed Connection Burst (related to KDD count, srv_count features)
+alert tcp any any -> $HOME_NET any (msg:"KDD Behavior - Connection Burst Detected"; flags:S; threshold:type both, track by_src, count 50, seconds 2; classtype:attempted-dos; priority:2; sid:7004002; rev:1;)
+
+# Same Service Burst (same_srv_rate from KDD)
+alert tcp any any -> $HOME_NET 80 (msg:"KDD Behavior - HTTP Connection Burst"; flags:S; threshold:type both, track by_src, count 30, seconds 5; classtype:attempted-dos; priority:2; sid:7004003; rev:1;)
+
+alert tcp any any -> $HOME_NET 443 (msg:"KDD Behavior - HTTPS Connection Burst"; flags:S; threshold:type both, track by_src, count 30, seconds 5; classtype:attempted-dos; priority:2; sid:7004004; rev:1;)
