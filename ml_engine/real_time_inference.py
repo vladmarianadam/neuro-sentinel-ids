@@ -55,32 +55,52 @@ def block_ip(ip_address, reason="Anomaly"):
 
 def process_flow_event(event):
     """
-    Extracts features from Suricata Flow event and maps to Model Schema.
+    Extracts features from Suricata Flow event and maps to KDD NSL Schema.
+
+    KDD Features extracted from Suricata:
+        - duration: flow.age (seconds)
+        - src_bytes: flow.bytes_toserver
+        - dst_bytes: flow.bytes_toclient
+        - count, srv_count: approximated as 1 (single flow)
+        - serror_rate, rerror_rate: 0 for completed flows
+        - same_srv_rate, diff_srv_rate: approximated
     """
     try:
         flow = event.get('flow', {})
-        
-        # FEATURE 1: Flow Duration (Convert Seconds -> Microseconds)
-        # Suricata 'age' is in seconds. CICIDS2017 uses microseconds.
-        duration_us = flow.get('age', 0) * 1_000_000
-        
-        # FEATURE 2: Total Fwd Packets (pkts_toserver)
-        fwd_pkts = flow.get('pkts_toserver', 0)
-        
-        # FEATURE 3: Total Bwd Packets (pkts_toclient)
-        bwd_pkts = flow.get('pkts_toclient', 0)
-        
-        # FEATURE 4: Total Fwd Bytes (bytes_toserver)
-        fwd_bytes = flow.get('bytes_toserver', 0)
-        
-        # FEATURE 5: Total Bwd Bytes (bytes_toclient)
-        bwd_bytes = flow.get('bytes_toclient', 0)
-        
-        # Construct Feature Vector
-        features = np.array([[duration_us, fwd_pkts, bwd_pkts, fwd_bytes, bwd_bytes]])
-        
+
+        # FEATURE 1: Duration (seconds) - matches KDD 'duration'
+        duration = flow.get('age', 0)
+
+        # FEATURE 2: Source bytes - matches KDD 'src_bytes'
+        src_bytes = flow.get('bytes_toserver', 0)
+
+        # FEATURE 3: Destination bytes - matches KDD 'dst_bytes'
+        dst_bytes = flow.get('bytes_toclient', 0)
+
+        # FEATURE 4-5: Connection counts (approximated for single flow)
+        # In a full implementation, these would be tracked across flows
+        count = 1
+        srv_count = 1
+
+        # FEATURE 6-7: Error rates (0 for completed flows)
+        # These would require tracking connection attempts
+        serror_rate = 0.0
+        rerror_rate = 0.0
+
+        # FEATURE 8-9: Service rates (approximated)
+        same_srv_rate = 1.0
+        diff_srv_rate = 0.0
+
+        # Construct Feature Vector (must match training order)
+        # Order: duration, src_bytes, dst_bytes, count, srv_count,
+        #        serror_rate, rerror_rate, same_srv_rate, diff_srv_rate
+        features = np.array([[
+            duration, src_bytes, dst_bytes, count, srv_count,
+            serror_rate, rerror_rate, same_srv_rate, diff_srv_rate
+        ]])
+
         return features
-        
+
     except Exception as e:
         logging.error(f"Feature extraction error: {e}")
         return None
@@ -124,7 +144,7 @@ def main():
                 # LOGIC B: Anomaly Detection (ML on Flow Completion)
                 elif event_type == 'flow':
                     # Only process flows that have actual data transfer
-                    if event['flow'].get('bytes_toserver', 0) < 100:
+                    if event['flow'].get('bytes_toserver', 0) < 10:
                         continue
 
                     features = process_flow_event(event)

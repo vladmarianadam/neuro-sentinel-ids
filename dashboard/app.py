@@ -33,7 +33,8 @@ def load_data():
                             'Bytes': e['flow']['bytes_toserver'] + e['flow']['bytes_toclient'],
                             'App': e.get('app_proto', 'unknown')
                         })
-                except:
+                except (json.JSONDecodeError, KeyError) as e:
+                    # Skip malformed JSON lines or missing required fields
                     continue
     except FileNotFoundError:
         return pd.DataFrame(), pd.DataFrame()

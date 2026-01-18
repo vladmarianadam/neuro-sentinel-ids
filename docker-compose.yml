@@ -32,6 +32,7 @@ services:
     environment:
       - LOG_FILE_PATH=/var/log/suricata/eve.json
       - BLOCK_THRESHOLD=0.85
+      - MIN_BYTES_FOR_ANALYSIS=0
     depends_on:
       - suricata
     restart: always

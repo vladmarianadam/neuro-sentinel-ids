@@ -3,7 +3,7 @@
 # Network Configuration
 vars:
   address-groups:
-    HOME_NET: "[172.18.0.0/16]"  # Rețeaua ta Docker
+    HOME_NET: "[172.19.0.0/16, 172.20.0.0/16, 172.18.0.0/16]"
     EXTERNAL_NET: "any"
 
 # Output Configuration (The Interface to Role B)
