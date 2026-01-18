@@ -53,9 +53,11 @@ services:
   # Service 4: Attack Simulation (Internal Testing)
   # Uses bridge mode to simulate "external" traffic if not testing on a live interface
   attacker:
-    image: kalilinux/kali-rolling
+    build: ./attacker
     container_name: red_team_sim
-    command: /bin/bash -c "apt-get update && apt-get install -y hping3 hydra nmap && apt install iputils-ping -y && tail -f /dev/null"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - attack_net
 
