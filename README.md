@@ -13,7 +13,7 @@ Neuro-Sentinel uses a dual-layer approach to detect and block network threats:
 
 - Real-time network traffic analysis
 - Automatic IP blocking via iptables (IPS mode)
-- 99.85% detection accuracy on NSL-KDD benchmark
+- 98.56% detection accuracy on NSL-KDD benchmark
 - Connection state tracking for advanced attack detection
 - Web dashboard for monitoring alerts and traffic
 - Built-in attack simulation environment for testing
@@ -117,7 +117,7 @@ cd ml_engine
 # Install dependencies
 pip install -r requirements.txt
 
-# Train on NSL-KDD dataset (125,973 samples, 99.85% accuracy)
+# Train on NSL-KDD dataset (125,973 samples, 98.56% accuracy)
 python train_model_kdd.py
 
 # Or train on EVE JSON data
@@ -308,8 +308,8 @@ cat logs/eve.json | jq 'select(.event_type=="alert")' | tail -20
 | Total Records | 125,973 |
 | Normal Traffic | 67,343 (53.5%) |
 | Attack Traffic | 58,630 (46.5%) |
-| Features | 45 |
-| Test Accuracy | 99.85% |
+| Features | 9 Selected Features |
+| Test Accuracy | 98.56% |
 
 ### Attack Categories Detected
 
@@ -324,11 +324,11 @@ cat logs/eve.json | jq 'select(.event_type=="alert")' | tail -20
 
 | Feature | Importance | Description |
 |---------|------------|-------------|
-| total_bytes | 17.9% | Total data transferred |
-| src_bytes | 12.4% | Bytes from source |
-| dst_bytes | 8.3% | Bytes to destination |
-| host_anomaly | 7.6% | Combined error metrics |
-| total_error_rate | 5.2% | Connection error patterns |
+| src_bytes | 45.5% | Bytes from source |
+| dst_bytes | 24.1% | Bytes to destination |
+| same_srv_rate | 10.2% | Frequency of same service access |
+| count | 6.1% | Connections to same host (2s window) |
+| diff_srv_rate | 5.3% | Different services accessed |
 
 ## Configuration
 
@@ -337,8 +337,8 @@ cat logs/eve.json | jq 'select(.event_type=="alert")' | tail -20
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LOG_FILE_PATH` | `/var/log/suricata/eve.json` | Suricata log path |
-| `CONFIDENCE_THRESHOLD` | `0.85` | ML detection threshold |
-| `MIN_BYTES_FOR_ANALYSIS` | `100` | Minimum bytes to analyze flow |
+| `BLOCK_THRESHOLD` | `0.85` | ML detection threshold |
+| `MIN_BYTES_FOR_ANALYSIS` | `0` | Minimum bytes to analyze flow |
 
 ### Adjusting Detection Sensitivity
 
@@ -347,8 +347,8 @@ Edit `docker-compose.yml`:
 ```yaml
 ml_engine:
   environment:
-    - CONFIDENCE_THRESHOLD=0.80  # Lower = more sensitive (more false positives)
-    - MIN_BYTES_FOR_ANALYSIS=50  # Lower = analyze smaller flows
+    - BLOCK_THRESHOLD=0.80       # Lower = more sensitive (more false positives)
+    - MIN_BYTES_FOR_ANALYSIS=0   # 0 = analyze all flows (including empty SYN packets)
 ```
 
 ## Troubleshooting
@@ -439,6 +439,5 @@ This project is for educational and research purposes.
 
 ## References
 
-- [NSL-KDD Dataset](https://www.unb.ca/cic/datasets/nsl.html)
+- [NSL-KDD Dataset](https://github.com/HoaNP/NSL-KDD-DataSet/tree/master) 
 - [Suricata Documentation](https://suricata.readthedocs.io/)
-- [CICIDS2017 Dataset](https://www.unb.ca/cic/datasets/ids-2017.html)
