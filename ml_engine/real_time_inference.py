@@ -131,7 +131,7 @@ def main():
                     continue
 
                 # IGNORE local traffic (Don't block the dashboard or yourself)
-                if src_ip in ['127.0.0.1', '::1', 'localhost'] or src_ip.startswith('192.168.1.'):
+                if src_ip in ['127.0.0.1', '::1', 'localhost', '172.18.0.1', '172.19.0.1'] or src_ip.startswith('192.168.1.'):
                     continue
 
                 # LOGIC A: Signature Detection (Suricata Alert)
@@ -146,7 +146,6 @@ def main():
 
                 # LOGIC B: Anomaly Detection (ML on Flow Completion)
                 elif event_type == 'flow':
-                    # print(event)
                     # Only process flows that have actual data transfer
                     if event['flow'].get('bytes_toserver', 0) < 10:
                         continue
@@ -155,11 +154,8 @@ def main():
                     if features_df is not None:
                         features_scaled = scaler.transform(features_df)
                         # Predict
-                        # print(f"DEBUG FEATURES: {features_df.values}")
                         prediction = model.predict(features_scaled)
-                        # print("prediction:", prediction)
                         confidence = np.max(model.predict_proba(features_scaled))
-                        # print("confidence:", confidence)
                         
                         # 1 = Attack
                         if prediction[0] == 1:
