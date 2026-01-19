@@ -15,6 +15,7 @@ alert http $HOME_NET any -> any any (msg:"ET POLICY IP Check Domain (api.ipify.o
 
 alert tcp $EXTERNAL_NET any -> $HOME_NET any (msg:"ET SCAN Nmap Scripting Engine User-Agent Detectat"; http.user_agent; content:"Nmap Scripting Engine"; sid:2000002; rev:1;)
 
+alert tcp any any -> any any (msg:"ML_TRAFFIC_CAPTURE"; sid:9999991; rev:1;)
 
 alert http any any -> any any (msg: "Possible SQL Injection attack (Contains singlequote)"; flow:established,to_server; content:"'"; nocase; http_uri; sid:50300001;)
 alert http any any -> any any (msg: "Possible SQL Injection attack (Contains UNION)"; flow:established,to_server; content:"union"; nocase; http_uri; sid:50300002;)
